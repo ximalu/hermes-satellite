@@ -25,6 +25,7 @@ class SatelliteWebSocket {
     private var shouldReconnect: Boolean = false
     private var savedServerUrl: String = ""
     private var savedPairingCode: String = ""
+    private var reconnectHandler: Handler? = null
 
     private val _connectionState = MutableStateFlow(State.DISCONNECTED)
     val connectionState: StateFlow<State> = _connectionState
@@ -35,9 +36,13 @@ class SatelliteWebSocket {
     private val _lastError = MutableStateFlow("")
     val lastError: StateFlow<String> = _lastError
 
-    enum class State { DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, ERROR }
+    enum class State { DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, RECONNECTING, ERROR }
 
     fun connect(serverUrl: String, pairingCode: String, userId: String = "ximalu") {
+        // Cancel any pending reconnect
+        reconnectHandler?.removeCallbacksAndMessages(null)
+        reconnectHandler = null
+
         // Clean up existing connection
         webSocket?.close(1000, "New connection requested")
         webSocket = null
@@ -79,6 +84,7 @@ class SatelliteWebSocket {
                     when (json.optString("type")) {
                         "auth_ok" -> {
                             _connectionState.value = State.CONNECTED
+                            _lastError.value = ""
                             Log.d(TAG, "Authenticated as ${json.optString("user_id")}")
                         }
                         "auth_error" -> {
@@ -101,36 +107,51 @@ class SatelliteWebSocket {
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e(TAG, "Connection failed: ${t.message}")
-                _lastError.value = t.message ?: "未知错误"
-                _connectionState.value = State.ERROR
-                // Auto reconnect in 5 seconds if we're supposed to
+                val msg = t.message ?: ""
+                Log.e(TAG, "Connection failed: $msg")
+                _lastError.value = msg
+
+                // "Software caused connection abort" = app backgrounded, reconnect silently
+                // "Socket closed" / "reset" = expected on network switch, reconnect silently
+                val isExpectedAbort = msg.contains("abort", ignoreCase = true) ||
+                        msg.contains("reset", ignoreCase = true) ||
+                        msg.contains("closed", ignoreCase = true) ||
+                        msg.contains("timeout", ignoreCase = true) ||
+                        msg.contains("refused", ignoreCase = true)
+
                 if (shouldReconnect && savedServerUrl.isNotEmpty()) {
-                    Log.d(TAG, "Scheduling reconnect in 5s")
-                    android.os.Handler(Looper.getMainLooper()).postDelayed({
-                        if (shouldReconnect && _connectionState.value == State.ERROR) {
-                            Log.d(TAG, "Auto-reconnecting...")
-                            connect(savedServerUrl, savedPairingCode, userId)
-                        }
-                    }, 5000)
+                    // Go to RECONNECTING (no red ERROR flash for expected disconnects)
+                    _connectionState.value = if (isExpectedAbort) State.RECONNECTING else State.ERROR
+                    Log.d(TAG, "Reconnecting in 2s...")
+                    scheduleReconnect(2000)
+                } else {
+                    _connectionState.value = State.ERROR
                 }
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 Log.d(TAG, "Connection closed: $code $reason")
-                _connectionState.value = State.DISCONNECTED
-                // Auto reconnect in 5 seconds for unexpected closes
                 if (shouldReconnect && code != 1000 && code != 1001) {
-                    Log.d(TAG, "Scheduling reconnect in 5s (close code=$code)")
-                    android.os.Handler(Looper.getMainLooper()).postDelayed({
-                        if (shouldReconnect && _connectionState.value == State.DISCONNECTED) {
-                            Log.d(TAG, "Auto-reconnecting after close...")
-                            connect(savedServerUrl, savedPairingCode, userId)
-                        }
-                    }, 5000)
+                    _connectionState.value = State.RECONNECTING
+                    Log.d(TAG, "Reconnecting in 2s (close code=$code)")
+                    scheduleReconnect(2000)
+                } else {
+                    _connectionState.value = State.DISCONNECTED
                 }
             }
         })
+    }
+
+    private fun scheduleReconnect(delayMs: Long) {
+        reconnectHandler?.removeCallbacksAndMessages(null)
+        reconnectHandler = Handler(Looper.getMainLooper())
+        reconnectHandler?.postDelayed({
+            reconnectHandler = null
+            if (shouldReconnect && savedServerUrl.isNotEmpty()) {
+                Log.d(TAG, "Auto-reconnecting...")
+                connect(savedServerUrl, savedPairingCode, userId)
+            }
+        }, delayMs)
     }
 
     fun send(text: String): Boolean {
@@ -142,6 +163,8 @@ class SatelliteWebSocket {
 
     fun disconnect() {
         shouldReconnect = false
+        reconnectHandler?.removeCallbacksAndMessages(null)
+        reconnectHandler = null
         webSocket?.close(1000, "User disconnected")
         webSocket = null
         _connectionState.value = State.DISCONNECTED

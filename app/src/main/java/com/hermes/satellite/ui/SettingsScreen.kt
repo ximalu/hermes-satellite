@@ -84,6 +84,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             SatelliteWebSocket.State.CONNECTED -> "✅ 已连接"
             SatelliteWebSocket.State.CONNECTING -> "🔄 连接中..."
             SatelliteWebSocket.State.AUTHENTICATING -> "🔐 验证中..."
+            SatelliteWebSocket.State.RECONNECTING -> "🔄 重连中..."
             SatelliteWebSocket.State.ERROR -> "❌ 连接失败"
             SatelliteWebSocket.State.DISCONNECTED -> "⚪ 未连接"
         }
