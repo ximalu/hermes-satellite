@@ -87,11 +87,19 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             SatelliteWebSocket.State.ERROR -> "❌ 连接失败"
             SatelliteWebSocket.State.DISCONNECTED -> "⚪ 未连接"
         }
+        val errorMsg = ws.lastError.collectAsState().value
         Text(
             text = "状态: $statusText",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (errorMsg.isNotEmpty() && wsState == SatelliteWebSocket.State.ERROR) {
+            Text(
+                text = "错误: $errorMsg",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
         HorizontalDivider()
