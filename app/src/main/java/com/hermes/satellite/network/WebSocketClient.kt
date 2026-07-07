@@ -52,10 +52,10 @@ class SatelliteWebSocket {
         savedServerUrl = serverUrl
         savedPairingCode = pairingCode
 
-        val wsUrl = if (serverUrl.startsWith("ws://") || serverUrl.startsWith("wss://"))
-            serverUrl
+        val wsUrl = if (serverUrl.trim().startsWith("ws://") || serverUrl.trim().startsWith("wss://"))
+            serverUrl.trim()
         else
-            "ws://$serverUrl/satellite"
+            "ws://${serverUrl.trim()}/satellite"
 
         val request = Request.Builder()
             .url(wsUrl)
