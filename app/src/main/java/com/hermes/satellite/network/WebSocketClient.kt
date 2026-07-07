@@ -12,8 +12,8 @@ class SatelliteWebSocket {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.SECONDS)  // No read timeout for WebSocket
-        .writeTimeout(0, TimeUnit.SECONDS) // No write timeout for WebSocket
+        .readTimeout(0, TimeUnit.SECONDS)
+        .writeTimeout(0, TimeUnit.SECONDS)
         .pingInterval(30, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
@@ -30,24 +30,19 @@ class SatelliteWebSocket {
     private val _connectionState = MutableStateFlow(State.DISCONNECTED)
     val connectionState: StateFlow<State> = _connectionState
 
-    private val _messages = MutableStateFlow<List<String>>(emptyList())
-    val messages: StateFlow<List<String>> = _messages
-
     private val _lastError = MutableStateFlow("")
     val lastError: StateFlow<String> = _lastError
 
     enum class State { DISCONNECTED, CONNECTING, AUTHENTICATING, CONNECTED, RECONNECTING, ERROR }
 
     fun connect(serverUrl: String, pairingCode: String, userId: String = "ximalu") {
-        // Cancel any pending reconnect
         reconnectHandler?.removeCallbacksAndMessages(null)
         reconnectHandler = null
 
-        // Clean up existing connection
+        // Close old connection without clearing history
         webSocket?.close(1000, "New connection requested")
         webSocket = null
         _connectionState.value = State.CONNECTING
-        _messages.value = emptyList()
         _lastError.value = ""
         shouldReconnect = true
 
@@ -73,8 +68,7 @@ class SatelliteWebSocket {
                 Log.d(TAG, "WebSocket opened, sending auth")
                 _connectionState.value = State.AUTHENTICATING
                 val authMsg = """{"type":"auth","pairing_code":"$pairingCode","user_id":"$userId"}"""
-                val sent = webSocket.send(authMsg)
-                Log.d(TAG, "Auth message sent: $sent")
+                webSocket.send(authMsg)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -86,17 +80,17 @@ class SatelliteWebSocket {
                             _connectionState.value = State.CONNECTED
                             _lastError.value = ""
                             Log.d(TAG, "Authenticated as ${json.optString("user_id")}")
+                            // Notify listeners that we're connected (for history reload)
+                            onConnectedCallback?.invoke()
                         }
                         "auth_error" -> {
                             _connectionState.value = State.ERROR
-                            val err = json.optString("text", "认证失败")
-                            _lastError.value = err
-                            Log.e(TAG, "Auth error: $err")
+                            _lastError.value = json.optString("text", "认证失败")
                         }
                         "chat" -> {
                             val msg = json.optString("text", "")
                             if (msg.isNotEmpty()) {
-                                _messages.value = _messages.value + msg
+                                onServerMessage?.invoke(msg)
                             }
                         }
                         "pong" -> { /* heartbeat OK */ }
@@ -111,8 +105,6 @@ class SatelliteWebSocket {
                 Log.e(TAG, "Connection failed: $msg")
                 _lastError.value = msg
 
-                // "Software caused connection abort" = app backgrounded, reconnect silently
-                // "Socket closed" / "reset" = expected on network switch, reconnect silently
                 val isExpectedAbort = msg.contains("abort", ignoreCase = true) ||
                         msg.contains("reset", ignoreCase = true) ||
                         msg.contains("closed", ignoreCase = true) ||
@@ -120,7 +112,6 @@ class SatelliteWebSocket {
                         msg.contains("refused", ignoreCase = true)
 
                 if (shouldReconnect && savedServerUrl.isNotEmpty()) {
-                    // Go to RECONNECTING (no red ERROR flash for expected disconnects)
                     _connectionState.value = if (isExpectedAbort) State.RECONNECTING else State.ERROR
                     Log.d(TAG, "Reconnecting in 2s...")
                     scheduleReconnect(2000)
@@ -133,7 +124,6 @@ class SatelliteWebSocket {
                 Log.d(TAG, "Connection closed: $code $reason")
                 if (shouldReconnect && code != 1000 && code != 1001) {
                     _connectionState.value = State.RECONNECTING
-                    Log.d(TAG, "Reconnecting in 2s (close code=$code)")
                     scheduleReconnect(2000)
                 } else {
                     _connectionState.value = State.DISCONNECTED
@@ -169,6 +159,10 @@ class SatelliteWebSocket {
         webSocket = null
         _connectionState.value = State.DISCONNECTED
     }
+
+    // Callbacks for ChatScreen integration
+    var onServerMessage: ((String) -> Unit)? = null
+    var onConnectedCallback: (() -> Unit)? = null
 
     companion object {
         private const val TAG = "Satellite.WS"
