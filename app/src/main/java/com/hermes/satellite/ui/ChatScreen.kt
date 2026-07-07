@@ -3,6 +3,7 @@ package com.hermes.satellite.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hermes.satellite.SatelliteApp
+import com.hermes.satellite.network.SatelliteWebSocket
 
 data class ChatMessage(
     val text: String,
@@ -18,18 +21,35 @@ data class ChatMessage(
 )
 
 @Composable
-fun ChatScreen(modifier: Modifier = Modifier, connected: Boolean) {
-    var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
+fun ChatScreen(modifier: Modifier = Modifier) {
+    val ws = SatelliteApp.ws
+    val wsState by ws.connectionState.collectAsState()
+    val serverMessages by ws.messages.collectAsState()
+    var localMessages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var inputText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+
+    // Combine local + server messages
+    val allMessages = remember(serverMessages, localMessages) {
+        localMessages + serverMessages.map { ChatMessage(text = it, isUser = false) }
+    }
+
+    // Auto-scroll to bottom
+    LaunchedEffect(allMessages.size) {
+        if (allMessages.isNotEmpty()) {
+            listState.animateScrollToItem(allMessages.size - 1)
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         // Message list
         LazyColumn(
+            state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (messages.isEmpty()) {
+            if (allMessages.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -43,7 +63,7 @@ fun ChatScreen(modifier: Modifier = Modifier, connected: Boolean) {
                     }
                 }
             }
-            items(messages) { msg ->
+            items(allMessages) { msg ->
                 ChatBubble(message = msg)
             }
         }
@@ -73,15 +93,16 @@ fun ChatScreen(modifier: Modifier = Modifier, connected: Boolean) {
                 Spacer(Modifier.width(8.dp))
                 FilledTonalButton(
                     onClick = {
-                        if (inputText.isNotBlank()) {
-                            messages = messages + ChatMessage(
+                        if (inputText.isNotBlank() && wsState == SatelliteWebSocket.State.CONNECTED) {
+                            ws.send(inputText)
+                            localMessages = localMessages + ChatMessage(
                                 text = inputText,
                                 isUser = true
                             )
                             inputText = ""
                         }
                     },
-                    enabled = connected,
+                    enabled = wsState == SatelliteWebSocket.State.CONNECTED && inputText.isNotBlank(),
                     modifier = Modifier.height(48.dp)
                 ) {
                     Text("发送")
