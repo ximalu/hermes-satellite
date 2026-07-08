@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Router
@@ -24,81 +25,107 @@ private data class Device(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeviceScreen(modifier: Modifier = Modifier) {
+fun DeviceScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var devices by remember { mutableStateOf(placeholderDevices) }
     var scanning by remember { mutableStateOf(false) }
     var lastScan by remember { mutableStateOf("尚未扫描") }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // Header with scan button
-        Surface(
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("设备") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                )
+            )
+        },
+        contentWindowInsets = WindowInsets.statusBars
+    ) { padding ->
+        Column(modifier = modifier
+            .padding(padding)
+            .fillMaxSize()) {
+            // Header with scan button
+            Surface(
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    Text(
-                        text = "内网设备",
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    Text(
-                        text = "上次扫描: $lastScan",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { /* TODO: trigger nmap scan */ },
-                    enabled = !scanning
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (scanning) "扫描中..." else "扫描")
-                }
-            }
-        }
-
-        // Device list
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(vertical = 4.dp)
-        ) {
-            if (devices.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Column {
                         Text(
-                            text = "连接后扫描内网，设备将显示在这里",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "内网设备",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = "上次扫描: $lastScan",
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    FilledTonalButton(
+                        onClick = { /* TODO: trigger nmap scan */ },
+                        enabled = !scanning
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (scanning) "扫描中..." else "扫描")
+                    }
                 }
             }
-            items(devices) { device ->
-                DeviceCard(device)
-            }
-        }
 
-        // Bottom hint
-        Surface(
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = "💡 连上内网 WiFi 后点击扫描，或直接对我说\"扫一下内网\"",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+            // Device list
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                if (devices.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "连接后扫描内网，设备将显示在这里",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                items(devices) { device ->
+                    DeviceCard(device)
+                }
+            }
+
+            // Bottom hint
+            Surface(
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "💡 连上内网 WiFi 后点击扫描，或直接对我说\"扫一下内网\"",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
         }
     }
 }

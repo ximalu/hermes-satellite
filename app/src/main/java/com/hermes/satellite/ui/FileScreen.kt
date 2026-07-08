@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MoreVert
@@ -24,56 +25,81 @@ private data class FileEntry(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FileScreen(modifier: Modifier = Modifier) {
-    // Placeholder: root path display
+fun FileScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var currentPath by remember { mutableStateOf("/sdcard") }
     var entries by remember { mutableStateOf(placeholderFiles) }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // Path bar
-        Surface(
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = "📁 $currentPath",
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("文件") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                )
             )
-        }
-
-        // File list
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(vertical = 4.dp)
-        ) {
-            items(entries) { entry ->
-                FileRow(entry)
-            }
-        }
-
-        // Bottom info
-        Surface(
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+        },
+        contentWindowInsets = WindowInsets.statusBars
+    ) { padding ->
+        Column(modifier = modifier
+            .padding(padding)
+            .fillMaxSize()) {
+            // Path bar
+            Surface(
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "${entries.size} 项",
-                    style = MaterialTheme.typography.labelSmall,
+                    text = "📁 $currentPath",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "连接后在此浏览手机文件",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            }
+
+            // File list
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(entries) { entry ->
+                    FileRow(entry)
+                }
+            }
+
+            // Bottom info
+            Surface(
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "${entries.size} 项",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "连接后在此浏览手机文件",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
