@@ -217,6 +217,8 @@ fun ChatScreen(modifier: Modifier = Modifier) {
         }
     }
 }
+}
+
 
 @Composable
 private fun ChatBubble(message: ChatEntry, showTime: Boolean) {
