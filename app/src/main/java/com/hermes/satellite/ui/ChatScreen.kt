@@ -80,82 +80,84 @@ fun ChatScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            // adjustResize handles keyboard — no imePadding needed
+            .navigationBarsPadding()  // Element X: account for nav bar
+            .imePadding()             // Element X: account for keyboard
     ) {
-        // Message list
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .nestedScroll(nestedScrollInterop),  // Nested scroll for keyboard interop (Element X pattern)
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (messages.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
+        Column(Modifier.fillMaxSize()) {
+            // Message list
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .nestedScroll(nestedScrollInterop),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (messages.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (wsState == SatelliteWebSocket.State.CONNECTED)
+                                    "连接成功，开始对话"
+                                else
+                                    "连接 Hermes 后，在这里与我对话",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+
+                items(messages, key = { "${it.timestamp}-${it.text.hashCode()}" }) { msg ->
+                    ChatBubble(
+                        message = msg,
+                        showTime = shouldShowTime(messages, msg)
+                    )
+                }
+            }
+
+            // Attachment preview
+            attachedImageUri?.let { uri ->
+                Surface(
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (wsState == SatelliteWebSocket.State.CONNECTED)
-                                "连接成功，开始对话"
-                            else
-                                "连接 Hermes 后，在这里与我对话",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
+                            text = "📎 ${uri.lastPathSegment ?: "图片"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f)
                         )
+                        TextButton(onClick = { attachedImageUri = null }) {
+                            Text("取消")
+                        }
                     }
                 }
             }
 
-            items(messages, key = { "${it.timestamp}-${it.text.hashCode()}" }) { msg ->
-                ChatBubble(
-                    message = msg,
-                    showTime = shouldShowTime(messages, msg)
-                )
-            }
-        }
-
-        // Attachment preview
-        attachedImageUri?.let { uri ->
+            // Input bar
             Surface(
-                tonalElevation = 1.dp,
+                tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "📎 ${uri.lastPathSegment ?: "图片"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = { attachedImageUri = null }) {
-                        Text("取消")
-                    }
-                }
-            }
-        }
-
-        // Input bar
-        Surface(
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
                 // Image picker button
                 if (attachedImageUri == null) {
