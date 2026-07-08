@@ -88,8 +88,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .navigationBarsPadding()
-            .imePadding()  // Keyboard-aware padding (Element X pattern)
+            .imePadding()  // adjustNothing + imePadding = correct keyboard handling
             .onSizeChanged { size ->
                 // Composer takes at most 50% of available height (Element X pattern)
                 maxComposerHeight = (size.height * 0.5f).toInt()
