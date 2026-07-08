@@ -16,6 +16,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hermes.satellite.SatelliteApp
 import com.hermes.satellite.network.SatelliteWebSocket
+import com.hermes.satellite.ssh.BusyBoxInstaller
+import com.hermes.satellite.ssh.SshdServer
+import com.hermes.satellite.ssh.SshTunnelManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,6 +218,40 @@ fun SettingsScreen(
                 // Developer section
                 HorizontalDivider()
                 Spacer(Modifier.height(4.dp))
+
+                // SSH Tunnel status
+                val sshState = SshTunnelManager.getState()
+                val sshStateText = when (sshState) {
+                    SshTunnelManager.State.DISCONNECTED -> "⚪ 未连接"
+                    SshTunnelManager.State.CONNECTING -> "🟡 连接中..."
+                    SshTunnelManager.State.CONNECTED -> "🟢 已连接"
+                    SshTunnelManager.State.ERROR -> "🔴 连接失败"
+                }
+                val bushyBoxPath = BusyBoxInstaller.getBusyBoxPath(context)
+                val hasBusyBox = java.io.File(bushyBoxPath).exists()
+
+                Text(
+                    text = "SSH 隧道",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = "本地 SSHD: 127.0.0.1:2222 " +
+                            (if (SshdServer.isRunning) "🟢 运行中" else "⚪ 未启动"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "反向隧道: $sshStateText",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "BusyBox: ${if (hasBusyBox) "✅ ${bushyBoxPath}" else "❌ 未安装"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+
                 Text(
                     text = "开发工具",
                     style = MaterialTheme.typography.titleSmall

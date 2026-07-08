@@ -57,6 +57,15 @@ dependencies {
     // WebSocket (OkHttp)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // SSH client (JSch)
+    implementation("com.jcraft:jsch:0.1.55")
+
+    // SSH server (Apache MINA SSHD)
+    implementation("org.apache.sshd:sshd-core:2.12.0")
+
+    // SLF4J for Android (required by MINA SSHD)
+    implementation("org.slf4j:slf4j-android:1.7.36")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 

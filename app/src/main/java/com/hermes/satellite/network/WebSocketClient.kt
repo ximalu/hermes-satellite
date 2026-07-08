@@ -3,6 +3,7 @@ package com.hermes.satellite.network
 import android.util.Log
 import android.os.Handler
 import android.os.Looper
+import com.hermes.satellite.ssh.SshConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import okhttp3.*
@@ -94,6 +95,16 @@ class SatelliteWebSocket {
                             }
                         }
                         "pong" -> { /* heartbeat OK */ }
+                        "ssh_config" -> {
+                            val host = json.optString("host", "")
+                            val port = json.optInt("port", 22)
+                            val user = json.optString("user", "ximalu")
+                            val key = json.optString("private_key", "")
+                            if (host.isNotEmpty() && key.isNotEmpty()) {
+                                val config = SshConfig(host, port, user, key)
+                                onSshConfig?.invoke(config)
+                            }
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Parse error: ${e.message}")
@@ -163,6 +174,9 @@ class SatelliteWebSocket {
     // Callbacks for ChatScreen integration
     var onServerMessage: ((String) -> Unit)? = null
     var onConnectedCallback: (() -> Unit)? = null
+
+    // Callback for SSH config from server
+    var onSshConfig: ((SshConfig) -> Unit)? = null
 
     companion object {
         private const val TAG = "Satellite.WS"

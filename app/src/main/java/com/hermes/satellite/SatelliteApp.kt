@@ -3,7 +3,12 @@ package com.hermes.satellite
 import android.app.Application
 import com.hermes.satellite.network.SatelliteWebSocket
 import com.hermes.satellite.service.SatelliteService
+import com.hermes.satellite.ssh.BusyBoxInstaller
+import com.hermes.satellite.ssh.SshTunnelManager
 import com.hermes.satellite.ui.CrashLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SatelliteApp : Application() {
     override fun onCreate() {
@@ -22,6 +27,20 @@ class SatelliteApp : Application() {
         }
 
         SatelliteService.start(this)
+
+        // Install BusyBox on background thread
+        CoroutineScope(Dispatchers.IO).launch {
+            val installed = BusyBoxInstaller.install(this@SatelliteApp)
+            CrashLogger.log("Satellite", "BusyBox installed: $installed")
+        }
+
+        // When server sends SSH config → establish reverse tunnel
+        ws.onSshConfig = { config ->
+            CrashLogger.log("Satellite", "SSH config received: ${config.host}:${config.port}")
+            CoroutineScope(Dispatchers.IO).launch {
+                SshTunnelManager.configureAndConnect(this@SatelliteApp, config)
+            }
+        }
     }
 
     companion object {
