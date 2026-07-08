@@ -13,15 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-
-private data class Device(
-    val ip: String,
-    val name: String,
-    val openPorts: List<String>,
-    val isRouter: Boolean = false
-)
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,9 +24,25 @@ fun DeviceScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var devices by remember { mutableStateOf(placeholderDevices) }
+    val scope = rememberCoroutineScope()
+    var devices by remember { mutableStateOf<List<NetworkScanner.Device>>(emptyList()) }
     var scanning by remember { mutableStateOf(false) }
-    var lastScan by remember { mutableStateOf("尚未扫描") }
+    var lastScanTime by remember { mutableStateOf("") }
+    var scanStatus by remember { mutableStateOf("点击按钮开始扫描") }
+
+    suspend fun doScan() {
+        scanning = true
+        scanStatus = "读取 ARP 表..."
+        val arpDevices = NetworkScanner.scanArpTable()
+        scanStatus = "Ping 扫描中 (并发 254 个)..."
+        val pingDevices = NetworkScanner.pingScan()
+        val merged = NetworkScanner.mergeResults(arpDevices, pingDevices)
+        devices = merged
+        scanning = false
+        val now = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        lastScanTime = now
+        scanStatus = if (merged.isEmpty()) "未发现设备" else "发现 ${merged.size} 个活跃设备"
+    }
 
     Scaffold(
         topBar = {
@@ -48,7 +59,28 @@ fun DeviceScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
-                )
+                ),
+                actions = {
+                    FilledTonalButton(
+                        onClick = {
+                            scope.launch { doScan() }
+                        },
+                        enabled = !scanning,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        if (scanning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Text(if (scanning) "扫描中" else "扫描")
+                    }
+                }
             )
         },
         contentWindowInsets = WindowInsets.statusBars
@@ -56,7 +88,8 @@ fun DeviceScreen(
         Column(modifier = modifier
             .padding(padding)
             .fillMaxSize()) {
-            // Header with scan button
+
+            // Status line
             Surface(
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
@@ -73,20 +106,19 @@ fun DeviceScreen(
                             text = "内网设备",
                             style = MaterialTheme.typography.titleSmall
                         )
-                        Text(
-                            text = "上次扫描: $lastScan",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        if (lastScanTime.isNotEmpty()) {
+                            Text(
+                                text = "上次扫描: $lastScanTime",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    FilledTonalButton(
-                        onClick = { /* TODO: trigger nmap scan */ },
-                        enabled = !scanning
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(if (scanning) "扫描中..." else "扫描")
-                    }
+                    Text(
+                        text = scanStatus,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
@@ -95,14 +127,18 @@ fun DeviceScreen(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
-                if (devices.isEmpty()) {
+                if (devices.isEmpty() && !scanning) {
                     item {
                         Box(
-                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "连接后扫描内网，设备将显示在这里",
+                                text = "点击右上角「扫描」按钮发现内网设备\n\n" +
+                                        "WiFi 和 5G 同时开启时，扫描的是蜂窝数据网段\n" +
+                                        "建议关闭移动数据、连接 WiFi 后扫描",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -120,7 +156,7 @@ fun DeviceScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "💡 连上内网 WiFi 后点击扫描，或直接对我说\"扫一下内网\"",
+                    text = "💡 ARP 表 + 并发 Ping，约 3 秒完成扫描。MAC 地址来自 ARP 表，主机名来自反向 DNS。",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -131,7 +167,7 @@ fun DeviceScreen(
 }
 
 @Composable
-private fun DeviceCard(device: Device) {
+private fun DeviceCard(device: NetworkScanner.Device) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -144,42 +180,42 @@ private fun DeviceCard(device: Device) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icon: router detection via IP ending in .1 or .254
+            val isLikelyRouter = device.ip.endsWith(".1") || device.ip.endsWith(".254")
             Icon(
-                imageVector = if (device.isRouter) Icons.Default.Router else Icons.Default.Computer,
+                imageVector = if (isLikelyRouter) Icons.Default.Router else Icons.Default.Computer,
                 contentDescription = null,
-                tint = if (device.isRouter) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+                tint = if (isLikelyRouter) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp)
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = device.name,
+                    text = if (device.hostname.isNotEmpty()) device.hostname else device.ip,
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Text(
-                    text = device.ip,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (device.openPorts.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        device.openPorts.forEach { port ->
-                            AssistChip(
-                                onClick = {},
-                                label = { Text(port, style = MaterialTheme.typography.labelSmall) },
-                                modifier = Modifier.height(24.dp)
-                            )
-                        }
-                    }
+                if (device.hostname.isNotEmpty()) {
+                    Text(
+                        text = device.ip,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (device.mac.isNotEmpty()) {
+                    Text(
+                        text = "MAC: ${device.mac}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (device.interfaceName.isNotEmpty()) {
+                    Text(
+                        text = "接口: ${device.interfaceName}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
     }
 }
-
-private val placeholderDevices = listOf(
-    Device("192.168.1.1", "路由器", listOf("53", "80", "443"), isRouter = true),
-    Device("192.168.1.100", "ubuntu-server", listOf("22 SSH", "80 HTTP")),
-    Device("192.168.1.50", "nas", listOf("22 SSH")),
-)
