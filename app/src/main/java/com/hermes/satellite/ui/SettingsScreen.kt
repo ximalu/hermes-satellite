@@ -138,10 +138,10 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("键盘测试（传统 View）")
+            Text("键盘测试（传统 View / 无 EdgeToEdge）")
         }
         Text(
-            text = "使用纯 Android View 测试键盘行为，排除 Compose 影响",
+            text = "纯 Android View，未启用 enableEdgeToEdge，用于定位系统层键盘问题",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
