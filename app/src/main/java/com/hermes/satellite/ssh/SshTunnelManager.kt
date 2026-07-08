@@ -49,7 +49,7 @@ object SshTunnelManager {
                 put("ServerAliveCountMax", "3")
             }.also { props ->
                 session = jsch.getSession(config.user, config.host, config.port).apply {
-                    setProperties(props)
+                    setConfig(props)
                     connect(15000) // 15s timeout
                     // Set up reverse tunnel: -R 2222:localhost:2222
                     setPortForwardingR(REMOTE_PORT, "127.0.0.1", LOCAL_PORT)
