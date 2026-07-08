@@ -83,7 +83,8 @@ fun ChatScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .consumeWindowInsets(WindowInsets(0, 0, 0, 0))
+            .consumeWindowInsets(WindowInsets.navigationBars)
+            .consumeWindowInsets(WindowInsets.ime)
     ) {
         // Message list
             LazyColumn(
@@ -92,8 +93,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                     .weight(1f)
                     .fillMaxWidth()
                     .nestedScroll(nestedScrollInterop)
-                    .consumeWindowInsets(WindowInsets.ime)
-                    .consumeWindowInsets(WindowInsets.navigationBars),
+                    .consumeWindowInsets(WindowInsets.ime),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
