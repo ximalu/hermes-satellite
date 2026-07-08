@@ -1,22 +1,27 @@
 package com.hermes.satellite.ui
 
-import androidx.compose.foundation.clickable
+import android.content.Intent
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,9 +131,9 @@ fun FileScreen(
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     items(entries, key = { it.path }) { entry ->
-                        FileRow(
+                        FileRowWithMenu(
                             entry = entry,
-                            onClick = {
+                            onNavigate = {
                                 if (entry.isDirectory) {
                                     currentPath = entry.path
                                 }
@@ -155,7 +160,7 @@ fun FileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = if (hasPermission) "点击文件夹进入" else "无权限",
+                        text = if (hasPermission) "点击文件夹进入，长按操作" else "无权限",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -165,12 +170,22 @@ fun FileScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FileRow(entry: FileManager.FileEntry, onClick: () -> Unit) {
+private fun FileRowWithMenu(
+    entry: FileManager.FileEntry,
+    onNavigate: () -> Unit
+) {
+    val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onNavigate,
+                onLongClick = { showMenu = true }
+            )
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -206,5 +221,88 @@ private fun FileRow(entry: FileManager.FileEntry, onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+
+        // Dropdown menu on long press
+        Box {
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                offset = DpOffset(x = (-100).dp, y = 0.dp)
+            ) {
+                if (!entry.isDirectory) {
+                    DropdownMenuItem(
+                        text = { Text("分享") },
+                        onClick = {
+                            showMenu = false
+                            shareFile(context, entry)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Share, contentDescription = null)
+                        }
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text("删除") },
+                    onClick = {
+                        showMenu = false
+                        deleteFile(context, entry)
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Delete, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error)
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun shareFile(context: Context, entry: FileManager.FileEntry) {
+    try {
+        val file = File(entry.path)
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = getMimeType(entry.name)
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(intent, "分享 ${entry.name}"))
+    } catch (e: Exception) {
+        CrashLogger.log("FileScreen", "分享失败: ${e.message}")
+    }
+}
+
+private fun deleteFile(context: Context, entry: FileManager.FileEntry) {
+    try {
+        val file = File(entry.path)
+        if (file.delete()) {
+            CrashLogger.log("FileScreen", "已删除: ${entry.path}")
+        } else {
+            CrashLogger.log("FileScreen", "删除失败: ${entry.path}")
+        }
+    } catch (e: Exception) {
+        CrashLogger.log("FileScreen", "删除异常: ${e.message}")
+    }
+}
+
+private fun getMimeType(name: String): String {
+    val ext = name.substringAfterLast('.', "").lowercase()
+    return when (ext) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "gif" -> "image/gif"
+        "mp4" -> "video/mp4"
+        "mp3" -> "audio/mpeg"
+        "pdf" -> "application/pdf"
+        "apk" -> "application/vnd.android.package-archive"
+        "txt", "log", "md" -> "text/plain"
+        "html", "htm" -> "text/html"
+        "json" -> "application/json"
+        "zip" -> "application/zip"
+        else -> "*/*"
     }
 }
