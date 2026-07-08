@@ -34,6 +34,7 @@
         <activity
             android:name=".KeyboardTestActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
             android:windowSoftInputMode="adjustResize" />
 
         <!-- Foreground service (keep-alive + WebSocket + SSH) -->

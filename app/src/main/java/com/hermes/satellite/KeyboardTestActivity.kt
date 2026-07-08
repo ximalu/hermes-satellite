@@ -1,18 +1,17 @@
 package com.hermes.satellite
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 
 /**
- * 键盘测试 Activity — 无 enableEdgeToEdge
+ * 键盘测试 Activity — 匹配 Element X 的基础配置
  *
- * 如果这个 Activity 键盘正常而主 App 不正常，
- * 则问题锁定在 enableEdgeToEdge() 与 adjustResize 的冲突。
+ * 使用 AppCompatActivity + Material3 主题
+ * 无 enableEdgeToEdge，使用 adjustResize
  */
-class KeyboardTestActivity : ComponentActivity() {
+class KeyboardTestActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 故意不调用 enableEdgeToEdge()，测试纯传统 View 行为
         setContentView(R.layout.activity_keyboard_test)
     }
 }
