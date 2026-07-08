@@ -16,9 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,9 +45,6 @@ fun ChatScreen(modifier: Modifier = Modifier) {
 
     // Nested scroll interop for proper keyboard handling (from Element X)
     val nestedScrollInterop = rememberNestedScrollInteropConnection()
-
-    // Track composer max height (50% of available screen, Element X pattern)
-    var maxComposerHeight by remember { mutableIntStateOf(Int.MAX_VALUE) }
 
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -88,11 +83,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding()  // adjustNothing + imePadding = correct keyboard handling
-            .onSizeChanged { size ->
-                // Composer takes at most 50% of available height (Element X pattern)
-                maxComposerHeight = (size.height * 0.5f).toInt()
-            }
+            // adjustResize handles keyboard — no imePadding needed
     ) {
         // Message list
         LazyColumn(
@@ -163,8 +154,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp)
-                    .imePadding(),
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Image picker button
@@ -178,14 +168,13 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                     }
                 }
 
-                // Text input (max 50% screen height, Element X pattern)
+                // Text input
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = it },
                     placeholder = { Text("输入消息...") },
                     modifier = Modifier
-                        .weight(1f)
-                        .heightIn(max = with(LocalDensity.current) { maxComposerHeight.toDp() }),
+                        .weight(1f),
                     shape = RoundedCornerShape(20.dp),
                     maxLines = 8,
                     colors = OutlinedTextFieldDefaults.colors(
