@@ -22,6 +22,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Download BusyBox (ARM64)
+        run: |
+          mkdir -p app/src/main/assets
+          curl -sL -o app/src/main/assets/busybox \
+            "https://raw.githubusercontent.com/Magisk-Modules-Repo/busybox-ndk/master/busybox-arm64" \
+            --connect-timeout 15 --max-time 30
+          chmod +x app/src/main/assets/busybox
+          ls -la app/src/main/assets/busybox
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 

@@ -9,3 +9,5 @@
 .cxx
 local.properties
 app-debug.apk
+app/src/main/assets/busybox
+*.apk
