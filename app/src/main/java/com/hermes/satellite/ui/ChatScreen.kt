@@ -83,6 +83,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
     ) {
         // Message list
             LazyColumn(
