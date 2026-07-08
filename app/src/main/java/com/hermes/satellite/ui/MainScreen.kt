@@ -1,8 +1,6 @@
 package com.hermes.satellite.ui
 
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
@@ -35,7 +33,6 @@ fun MainScreen() {
     val wsState by ws.connectionState.collectAsState()
 
     Scaffold(
-        contentWindowInsets = WindowInsets.statusBars,
         topBar = {
             TopAppBar(
                 title = { Text("🛰️ Hermes Satellite") },

@@ -80,14 +80,11 @@ fun ChatScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .navigationBarsPadding()  // Element X: account for nav bar
-            .imePadding()             // Element X: account for keyboard
     ) {
-        Column(Modifier.fillMaxSize()) {
-            // Message list
+        // Message list
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -216,7 +213,6 @@ fun ChatScreen(modifier: Modifier = Modifier) {
             }
         }
     }
-}
 }
 
 
