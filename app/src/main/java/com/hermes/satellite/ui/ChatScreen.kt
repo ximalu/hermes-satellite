@@ -90,7 +90,8 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .nestedScroll(nestedScrollInterop),
+                    .nestedScroll(nestedScrollInterop)
+                    .consumeWindowInsets(WindowInsets.navigationBars),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -151,7 +152,6 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .imePadding()
-                    .navigationBarsPadding()
             ) {
                 Row(
                     modifier = Modifier
