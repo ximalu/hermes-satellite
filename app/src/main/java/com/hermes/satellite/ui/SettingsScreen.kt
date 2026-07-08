@@ -6,10 +6,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import android.content.Intent
-import com.hermes.satellite.KeyboardTestActivity
 import com.hermes.satellite.SatelliteApp
 import com.hermes.satellite.network.SatelliteWebSocket
 
@@ -150,28 +147,6 @@ fun SettingsScreen(
             Spacer(Modifier.weight(1f))
 
             HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-
-            val context = LocalContext.current
-            Text(
-                text = "诊断工具",
-                style = MaterialTheme.typography.titleSmall
-            )
-            OutlinedButton(
-                onClick = {
-                    val intent = Intent(context, KeyboardTestActivity::class.java)
-                    context.startActivity(intent)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("键盘测试（传统 View / 无 EdgeToEdge）")
-            }
-            Text(
-                text = "纯 Android View，未启用 enableEdgeToEdge，用于定位系统层键盘问题",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "版本 0.4.0 • Hermes Satellite",
