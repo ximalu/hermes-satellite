@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import com.hermes.satellite.KeyboardTestActivity
 import com.hermes.satellite.SatelliteApp
 import com.hermes.satellite.network.SatelliteWebSocket
 
@@ -120,8 +123,32 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
         Spacer(Modifier.weight(1f))
 
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+
+        val context = LocalContext.current
         Text(
-            text = "版本 0.1.0 • Hermes Satellite",
+            text = "诊断工具",
+            style = MaterialTheme.typography.titleSmall
+        )
+        OutlinedButton(
+            onClick = {
+                val intent = Intent(context, KeyboardTestActivity::class.java)
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("键盘测试（传统 View）")
+        }
+        Text(
+            text = "使用纯 Android View 测试键盘行为，排除 Compose 影响",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "版本 0.3.1 • Hermes Satellite",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

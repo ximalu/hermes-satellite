@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="键盘测试（传统 View）"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="点击下方输入框，观察键盘弹出后输入框位置"
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:gravity="center"
+        android:layout_marginBottom="32dp" />
+
+    <EditText
+        android:id="@+id/editText1"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="输入框 1（顶部）"
+        android:background="@drawable/edit_text_bg"
+        android:paddingHorizontal="12dp"
+        android:textSize="16sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <EditText
+        android:id="@+id/editText2"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:hint="输入框 2（底部）"
+        android:background="@drawable/edit_text_bg"
+        android:paddingHorizontal="12dp"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="说明：\n- 点击底部输入框，键盘弹出后它应紧贴键盘上方\n- 如果出现空白间隙或升到屏幕中间，说明是系统/输入法行为\n- 如果正常，说明 Compose 层才是问题"
+        android:textSize="12sp"
+        android:textColor="#999999"
+        android:lineSpacingExtra="4dp" />
+
+</LinearLayout>
