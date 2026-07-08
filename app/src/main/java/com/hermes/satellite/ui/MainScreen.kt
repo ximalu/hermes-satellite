@@ -35,7 +35,7 @@ fun MainScreen() {
     val wsState by ws.connectionState.collectAsState()
 
     Scaffold(
-        contentWindowInsets = WindowInsets.statusBars,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text("🛰️ Hermes Satellite") },
