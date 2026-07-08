@@ -9,14 +9,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hermes.satellite.SatelliteApp
@@ -41,6 +45,12 @@ fun ChatScreen(modifier: Modifier = Modifier) {
     val listState = rememberLazyListState()
     var attachedImageUri by remember { mutableStateOf<Uri?>(null) }
 
+    // Nested scroll interop for proper keyboard handling (from Element X)
+    val nestedScrollInterop = rememberNestedScrollInteropConnection()
+
+    // Track composer max height (50% of available screen, Element X pattern)
+    var maxComposerHeight by remember { mutableIntStateOf(Int.MAX_VALUE) }
+
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -48,7 +58,7 @@ fun ChatScreen(modifier: Modifier = Modifier) {
         attachedImageUri = uri
     }
 
-    // Auto-scroll to bottom
+    // Auto-scroll to bottom on new messages
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -79,14 +89,19 @@ fun ChatScreen(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .navigationBarsPadding()
-            .imePadding()  // 👈 Keyboard-aware padding
+            .imePadding()  // Keyboard-aware padding (Element X pattern)
+            .onSizeChanged { size ->
+                // Composer takes at most 50% of available height (Element X pattern)
+                maxComposerHeight = (size.height * 0.5f).toInt()
+            }
     ) {
         // Message list
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .nestedScroll(nestedScrollInterop),  // Nested scroll for keyboard interop (Element X pattern)
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -104,13 +119,14 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                             else
                                 "连接 Hermes 后，在这里与我对话",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
             }
 
-            items(messages) { msg ->
+            items(messages, key = { "${it.timestamp}-${it.text.hashCode()}" }) { msg ->
                 ChatBubble(
                     message = msg,
                     showTime = shouldShowTime(messages, msg)
@@ -163,14 +179,16 @@ fun ChatScreen(modifier: Modifier = Modifier) {
                     }
                 }
 
-                // Text input
+                // Text input (max 50% screen height, Element X pattern)
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = it },
                     placeholder = { Text("输入消息...") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(max = with(LocalDensity.current) { maxComposerHeight.toDp() }),
                     shape = RoundedCornerShape(20.dp),
-                    maxLines = 4,
+                    maxLines = 8,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                     )
@@ -229,10 +247,10 @@ private fun ChatBubble(message: ChatEntry, showTime: Boolean) {
                 MaterialTheme.colorScheme.primaryContainer
             else
                 MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.widthIn(max = 300.dp)
+            modifier = Modifier.widthIn(max = 320.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                // Show text or image
+                // Show image placeholder or formatted text
                 if (message.text.startsWith("[图片]")) {
                     Text(
                         text = "🖼️ ${message.text.removePrefix("[图片] ")}",
@@ -243,13 +261,10 @@ private fun ChatBubble(message: ChatEntry, showTime: Boolean) {
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    Text(
+                    // Use new MessageTextRenderer for code blocks, URLs, inline code
+                    MessageTextContent(
                         text = message.text,
-                        fontSize = 15.sp,
-                        color = if (message.isUser)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                        isUser = message.isUser
                     )
                 }
             }
