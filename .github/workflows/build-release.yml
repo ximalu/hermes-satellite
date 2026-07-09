@@ -64,3 +64,9 @@ jobs:
           name: HermesSatellite-APK
           path: app/build/outputs/apk/release/HermesSatellite-*.apk
           if-no-files-found: error
+
+      - name: Fail if build failed
+        if: env.BUILD_EXIT_CODE != '0'
+        run: |
+          echo "Build failed with exit code ${{ env.BUILD_EXIT_CODE }}"
+          exit 1
