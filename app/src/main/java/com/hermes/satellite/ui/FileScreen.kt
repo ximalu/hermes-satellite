@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,7 +23,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.hermes.satellite.SatelliteApp
+import com.hermes.satellite.data.ChatHistory
+import com.hermes.satellite.network.SatelliteWebSocket
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -232,6 +245,16 @@ private fun FileRowWithMenu(
             ) {
                 if (!entry.isDirectory) {
                     DropdownMenuItem(
+                        text = { Text("发送给 Hermes") },
+                        onClick = {
+                            showMenu = false
+                            sendFileToHermes(context, entry)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Send, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
                         text = { Text("分享") },
                         onClick = {
                             showMenu = false
@@ -287,6 +310,64 @@ private fun deleteFile(context: Context, entry: FileManager.FileEntry) {
         }
     } catch (e: Exception) {
         CrashLogger.log("FileScreen", "删除异常: ${e.message}")
+    }
+}
+
+private fun sendFileToHermes(context: Context, entry: FileManager.FileEntry) {
+    val serverUrl = SatelliteApp.ws.getServerUrl()
+    if (serverUrl.isBlank()) {
+        CrashLogger.log("FileScreen", "发送失败: 未设置服务器地址")
+        return
+    }
+
+    // Determine server host:port from the WebSocket URL
+    // ws://host:port/satellite → http://host:port/upload
+    val uploadUrl = serverUrl.trim().let { url ->
+        val base = url.removePrefix("ws://").removePrefix("wss://")
+            .removeSuffix("/satellite")
+        "http://$base/upload"
+    }
+
+    CrashLogger.log("FileScreen", "上传 ${entry.name} 到 $uploadUrl")
+    val file = File(entry.path)
+    if (!file.exists()) {
+        CrashLogger.log("FileScreen", "发送失败: 文件不存在")
+        return
+    }
+
+    try {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        val mimeType = getMimeType(entry.name)
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", entry.name,
+                file.asRequestBody(mimeType.toMediaTypeOrNull()))
+            .build()
+
+        val request = Request.Builder()
+            .url(uploadUrl)
+            .post(requestBody)
+            .build()
+
+        val response = client.newCall(request).execute()
+        if (response.isSuccessful) {
+            // Add chat message
+            val chatText = "📎 ${entry.name} (${FileManager.formatSize(entry.size)})"
+            SatelliteApp.ws.send(chatText)
+            val chatHistory = ChatHistory(context)
+            chatHistory.add(chatText, isUser = true)
+            CrashLogger.log("FileScreen", "已发送: ${entry.name}")
+        } else {
+            CrashLogger.log("FileScreen", "上传失败: HTTP ${response.code}")
+        }
+        response.close()
+    } catch (e: Exception) {
+        CrashLogger.log("FileScreen", "发送异常: ${e.message}")
     }
 }
 

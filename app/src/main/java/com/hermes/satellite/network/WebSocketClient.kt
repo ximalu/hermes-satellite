@@ -28,6 +28,9 @@ class SatelliteWebSocket {
     private var savedPairingCode: String = ""
     private var reconnectHandler: Handler? = null
 
+    /** Get the currently connected/saved server URL */
+    fun getServerUrl(): String = savedServerUrl.ifEmpty { serverUrl }
+
     private val _connectionState = MutableStateFlow(State.DISCONNECTED)
     val connectionState: StateFlow<State> = _connectionState
 

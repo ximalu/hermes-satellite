@@ -62,6 +62,29 @@
 
 ---
 
+### 文件发送：Relay 上传端点 + FileScreen「发送给 Hermes」菜单
+
+**功能：** 在文件浏览器中长按文件 → 选择「发送给 Hermes」→ 上传到服务器 → 聊天列表显示 `📎 文件名`
+
+**Relay 端（已部署）：**
+- `POST /upload` — 接收 multipart 文件上传，保存到 `/data/satellite-files/`
+- `GET /files/{filename}` — 提供文件 HTTP 下载（供 Hermes Agent 读取）
+
+**App 端：**
+- FileScreen 长按菜单增加「发送给 Hermes」选项
+- 使用 OkHttp multipart 上传文件到 Relay
+- 上传成功后通过 WebSocket 发送 `📎 文件名` 聊天消息
+- 聊天记录中也追加该记录
+
+**涉及文件：**
+- `home/ubuntu/.hermes/scripts/satellite-relay.py` — 上传/下载端点
+- `app/src/main/java/com/hermes/satellite/ui/FileScreen.kt` — 发送菜单 + 上传逻辑
+- `app/src/main/java/com/hermes/satellite/network/WebSocketClient.kt` — 暴露 `getServerUrl()`
+
+**验证状态：** ❌ 未测试
+
+---
+
 ### Git 历史清洗
 - 使用 git filter-branch 从所有历史 commit 中移除 `app/src/main/assets/busybox`（1.5MB 二进制）
 - Repo 大小：22M → 17M
