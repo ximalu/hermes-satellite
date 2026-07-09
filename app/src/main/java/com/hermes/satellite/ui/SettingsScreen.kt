@@ -29,9 +29,20 @@ fun SettingsScreen(
     val context = LocalContext.current
     val ws = SatelliteApp.ws
     val wsState by ws.connectionState.collectAsState()
-    var serverUrl by remember { mutableStateOf("") }
-    var pairingCode by remember { mutableStateOf("") }
+
+    // Persistent settings via SharedPreferences
+    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    var serverUrl by remember { mutableStateOf(prefs.getString("server_url", "") ?: "") }
+    var pairingCode by remember { mutableStateOf(prefs.getString("pairing_code", "") ?: "") }
     var savedServer by remember { mutableStateOf(false) }
+
+    // Persist settings whenever the user modifies them
+    fun saveSettings() {
+        prefs.edit()
+            .putString("server_url", serverUrl)
+            .putString("pairing_code", pairingCode)
+            .apply()
+    }
 
     // Log viewer state
     var showLogs by remember { mutableStateOf(false) }
@@ -156,6 +167,7 @@ fun SettingsScreen(
                 } else {
                     Button(
                         onClick = {
+                            saveSettings()
                             ws.connect(serverUrl, pairingCode)
                             savedServer = true
                         },

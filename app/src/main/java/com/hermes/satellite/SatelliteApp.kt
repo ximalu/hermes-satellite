@@ -32,6 +32,15 @@ class SatelliteApp : Application() {
         CoroutineScope(Dispatchers.IO).launch {
             val installed = BusyBoxInstaller.install(this@SatelliteApp)
             CrashLogger.log("Satellite", "BusyBox installed: $installed")
+
+            // Auto-reconnect if saved settings exist
+            val prefs = this@SatelliteApp.getSharedPreferences("settings", Context.MODE_PRIVATE)
+            val savedUrl = prefs.getString("server_url", "") ?: ""
+            val savedCode = prefs.getString("pairing_code", "") ?: ""
+            if (savedUrl.isNotBlank() && savedCode.isNotBlank()) {
+                CrashLogger.log("Satellite", "Auto-connecting to $savedUrl")
+                ws.connect(savedUrl, savedCode)
+            }
         }
 
         // When server sends SSH config → establish reverse tunnel
