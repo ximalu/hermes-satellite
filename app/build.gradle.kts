@@ -12,8 +12,18 @@ android {
         applicationId = "com.hermes.satellite"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.4.1"
+        versionCode = 15
+        versionName = "0.5.0"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = false
+        }
     }
 
     buildTypes {
@@ -24,6 +34,13 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+        }
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "HermesSatellite-${versionName}.apk"
         }
     }
 

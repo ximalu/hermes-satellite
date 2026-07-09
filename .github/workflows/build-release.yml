@@ -1,0 +1,63 @@
+name: Build Release APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android SDK
+        run: |
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd /tmp
+          curl -sL "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip" -o cmdline-tools.zip
+          unzip -q cmdline-tools.zip
+          mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;37.0.0" --sdk_root=$ANDROID_HOME 2>&1 | tail -5
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: Download BusyBox
+        run: |
+          mkdir -p app/src/main/assets
+          curl -sL "https://github.com/Magisk-Modules-Repo/busybox-ndk/releases/latest/download/busybox-arm64" -o app/src/main/assets/busybox
+          chmod +x app/src/main/assets/busybox
+          ls -lh app/src/main/assets/busybox
+
+      - name: Build release APK
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          ./gradlew assembleRelease --stacktrace --no-daemon --max-workers=2 2>&1 | tee /tmp/build.log
+          echo "BUILD_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: Show build tail on failure
+        if: failure()
+        run: tail -100 /tmp/build.log
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HermesSatellite-APK
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

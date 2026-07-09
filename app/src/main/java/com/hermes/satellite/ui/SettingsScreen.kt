@@ -276,7 +276,7 @@ fun SettingsScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "版本 0.4.1 • Hermes Satellite",
+                    text = "版本 0.5.0 • Hermes Satellite",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
