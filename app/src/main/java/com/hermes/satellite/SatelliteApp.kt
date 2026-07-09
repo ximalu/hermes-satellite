@@ -14,6 +14,9 @@ class SatelliteApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        // Initialize persistent logger (must be before crash handler)
+        CrashLogger.init(this)
+
         // Capture uncaught crashes to in-memory logs
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             CrashLogger.log("CRASH", "Thread: ${thread.name}")

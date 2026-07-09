@@ -68,7 +68,7 @@ fun SettingsScreen(
                 )
             )
         },
-        contentWindowInsets = WindowInsets.statusBars
+        contentWindowInsets = WindowInsets.systemBars
     ) { padding ->
 
         if (showLogs) {

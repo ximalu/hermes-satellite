@@ -4,6 +4,27 @@
 
 > ⚠️ 以下修复均已提交到 GitHub，但**尚未编译 APK 验证**。用户当前安装的仍是 v0.4.1 旧版 APK，不含以下任何修复。
 
+### 修复：日志持久化 + 日志视图底部导航栏遮挡
+
+**问题：**
+1. 崩溃重启后，开发者日志为空 — CrashLogger 用纯内存 buffer，进程死亡后丢失
+2. 日志页面底部被系统导航栏遮挡 — `contentWindowInsets` 只设了 statusBars
+
+**修复：**
+- CrashLogger 增加文件持久化（`filesDir/crash_log.txt`），`init(context)` 在 Application.onCreate 中初始化
+- 每条日志同时写入内存 buffer 和文件，崩溃重启后日志仍可从文件读取
+- 日志文件超 500KB 自动清理
+- SettingsScreen 中 Scaffold 的 `contentWindowInsets` 从 `statusBars` 改为 `systemBars`，底部导航栏不再遮挡内容
+
+**涉及文件：**
+- `app/src/main/java/com/hermes/satellite/ui/CrashLogger.kt`
+- `app/src/main/java/com/hermes/satellite/SatelliteApp.kt`
+- `app/src/main/java/com/hermes/satellite/ui/SettingsScreen.kt`
+
+**验证状态：** ❌ 未测试
+
+---
+
 ### 修复：设置项持久化 + 启动自动重连
 
 **问题：** App 崩溃重启后，服务器地址和配对码丢失，需重新输入。
