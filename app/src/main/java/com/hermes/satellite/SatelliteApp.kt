@@ -1,6 +1,7 @@
 package com.hermes.satellite
 
 import android.app.Application
+import android.content.Context
 import com.hermes.satellite.network.SatelliteWebSocket
 import com.hermes.satellite.service.SatelliteService
 import com.hermes.satellite.ssh.BusyBoxInstaller

@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
 import com.hermes.satellite.SatelliteApp
 import com.hermes.satellite.network.SatelliteWebSocket
 import com.hermes.satellite.ssh.BusyBoxInstaller
