@@ -4,6 +4,9 @@
 
 # JSch (SSH client)
 -keep class com.jcraft.jsch.** { *; }
+-dontwarn com.jcraft.jsch.**
+-dontwarn com.jcraft.jzlib.**
+-dontwarn org.ietf.jgss.**
 
 # Apache MINA SSHD
 -keep class org.apache.sshd.** { *; }
